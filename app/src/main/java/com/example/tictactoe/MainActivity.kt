@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -40,7 +41,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
@@ -90,6 +93,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+import androidx.activity.compose.LocalActivityResultRegistryOwner
+
+// Required for the Exit doorway icon
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+
+import android.app.Activity
+import androidx.compose.ui.platform.LocalContext
+
 
 // ---------------------------------------------------------------------------
 // Game Domain & State Models
@@ -192,6 +204,7 @@ fun TicTacToeTheme(
 
 @Composable
 fun TicTacToeAppRoot() {
+    var isDarkMode by remember { mutableStateOf(true) } // Defaults to dark mode
     var currentScreen by remember { mutableStateOf(AppScreen.HOME) }
     var selectedMode by remember { mutableStateOf(GameMode.ONE_PLAYER) }
 
@@ -215,6 +228,8 @@ fun TicTacToeAppRoot() {
     when (currentScreen) {
         AppScreen.HOME -> {
             HomeScreen(
+                isDarkMode = isDarkMode,
+                onToggleTheme = { isDarkMode = !isDarkMode },
                 onSelectMode = { mode ->
                     selectedMode = mode
                     if (mode == GameMode.ONE_PLAYER) {
@@ -266,8 +281,14 @@ fun TicTacToeAppRoot() {
 
 @Composable
 fun HomeScreen(
+    isDarkMode: Boolean,
+    onToggleTheme: () -> Unit,
     onSelectMode: (GameMode) -> Unit
 ) {
+
+    val context = LocalContext.current
+    val activity = context as? Activity
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
@@ -275,10 +296,52 @@ fun HomeScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+                .statusBarsPadding()
+                .padding(24.dp, vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp, bottom = 12.dp),
+                horizontalArrangement = Arrangement.End
+            ) {
+                IconButton(
+                    onClick = onToggleTheme,
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(if (isDarkMode) Color.White else Color(0xFF0F172A))
+                ) {
+                    Icon(
+                        imageVector = if (isDarkMode) Icons.Default.LightMode else Icons.Default.DarkMode,
+                        contentDescription = if (isDarkMode) "Switch to Light Theme" else "Switch to Dark Theme",
+                        tint = if (isDarkMode) Color(0xFF0F172A) else Color.White,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            IconButton(
+                onClick = { activity?.finish() },
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(if (isDarkMode) Color(0xFF1E293B) else Color(0xFFE2E8F0))
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                    contentDescription = "Exit",
+                    tint = Color(0xFFEF4444),
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.weight(0.15f))
+
             // App Branding Banner
             Box(
                 modifier = Modifier
@@ -486,9 +549,9 @@ fun PlayerSetupScreen(
 
             Text(
                 text = if (mode == GameMode.ONE_PLAYER)
-                    "Enter your name. Your AI opponent's name is locked as Tony."
+                    "Enter your name \n(Your AI opponent is Tony)"
                 else
-                    "Enter names for both players to start match.",
+                    "Enter names for both players to start match",
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                 textAlign = TextAlign.Center
@@ -580,7 +643,7 @@ fun PlayerSetupScreen(
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = "AI (FIXED)",
+                                    text = "AI",
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.secondary
@@ -647,6 +710,7 @@ fun PlayerSetupScreen(
 // - Bottom Right: "Check Stats" button
 // ---------------------------------------------------------------------------
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameBoardScreen(
     mode: GameMode,
@@ -913,7 +977,8 @@ fun GameBoardScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp),
+                    .statusBarsPadding()
+                    .padding(top = 16.dp, start = 8.dp, end = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
